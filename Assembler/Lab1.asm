@@ -84,10 +84,12 @@ XOR BX, BX ; обнулить регистр BX командой XOR,
 XOR AX, AX; обнулить регистр AX
 
 MOV BL, [ESI]
-.if (BL == '-')
-	MOV flagA, 1
-	INC ESI
-.endif
+CMP BL, '-'
+JNE CONVERT_1
+MOV flagA, 1
+INC ESI
+DEC ECX
+
 
 CONVERT_1: 	; метка начала тела цикла
 	MOV BL, [ESI] ; поместить символ из введенной строки в регистр 
@@ -104,7 +106,14 @@ CONVERT_1: 	; метка начала тела цикла
 	ADD AX, BX ; добавить к полученному в AX числу новую цифру	
 	INC ESI ; перейти на следующий символ строки
 LOOP CONVERT_1 ; перейти на следующую итерацию цикла
+
+CMP flagA, 0
+JE notNegativeA
+neg EAX
+
+notNegativeA:
 MOV NUMEROS_A, EAX ; отправим полученное число в память
+
 
 ;вывод строки
 PUSH OFFSET STRN2 ; в стек помещается указатель на строку
@@ -136,10 +145,11 @@ XOR BX, BX ; обнулить регистр BX командой XOR,
 XOR AX, AX ; обнулить регистр AX
 
 MOV BL, [ESI]
-.if (BL == '-')
-	MOV flagB, 1
-	INC ESI
-.endif
+CMP BL, '-'
+JNE CONVERT_2
+MOV flagB, 1
+INC ESI
+DEC ECX
 
 
 CONVERT_2: 	; метка начала тела цикла
@@ -159,23 +169,47 @@ CONVERT_2: 	; метка начала тела цикла
 	ADD AX, BX ; добавить к полученному в AX числу новую цифру	
 	INC ESI ; перейти на следующий символ строки
 LOOP CONVERT_2 ; перейти на следующую итерацию цикла
-MOV NUMEROS_B, EAX ; отправим второе число
 
+CMP flagB, 0
+JE notNegativeB
+neg EAX
 
+notNegativeB:
+MOV NUMEROS_B, EAX ; отправим полученное число в память
 
-; сложение чисел
 MOV EAX, NUMEROS_A ; отправим первое число в регистр
 MOV EBX, NUMEROS_B ; отправим второе число в регистр
+
+MOV EDI, flagA
+ADD	EDI, flagB
+
+
+CMP EDI, 2
+JNE sum
+MOV flagAB, EDI
+neg EAX
+neg EBX
+
+; сложение чисел
+sum:
 ADD EAX, EBX	   ; сложим, результат в EAX
+
+
 ; отправлять обратно в память не будем, результат в EAX понадобится
 
 ; вывод результата
+
 CDQ ; приведём тип к 64-х битному (EAX распространяется на EDX)
 
 XOR EDI, EDI ; обнуление
 MOV TEN, 10 ; загрузка константы
 MOV ESI,OFFSET BUF ; начало строки хранится в переменной BUF
 
+CMP flagAB, 2
+JNE PRINT
+PUSH '-'
+
+PRINT:
 .WHILE EAX>=TEN ; пока число > 10
 		IDIV TEN ; результат в EAX, остаток в EDX
 		;поместить в строку
