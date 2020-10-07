@@ -25,7 +25,7 @@ TEN DD ? ; десятеричная
 
 flagA DD ?
 flagB DD ?
-flagAB DD ?
+flagNegSum DD ?
 
 .CODE ; сегмент кода
 START: ; метка точки входа
@@ -52,7 +52,7 @@ MOV DOUT, EAX
 INPUT:
 PUSH OFFSET STRN1 ; в стек помещается указатель на строку
 CALL lstrlenA@4 ; длина в EAX
-; вызов функции WriteConsoleA для вывода строки STRN
+
 PUSH 0 ; в стек помещается 5-й параметр
 PUSH OFFSET LENS ; 4-й параметр
 PUSH EAX ; 3-й параметр
@@ -69,18 +69,15 @@ PUSH DIN ; 1-й параметр
 CALL ReadConsoleA@20 
 
 
-CMP LENS, 5; ПРОВЕРКА НА КОЛ-ВО СИМВОЛОВ
+CMP LENS, 5; Проверка на количество символов
 JL INPUT
 
 
-
-;обработка 1-го числа (на данный момент число виде строки в буфере)
 MOV SIXT, 16 ; присвоение основание системы счисления
 SUB LENS, 2 ; вычитаем символы LF и CR (10 и 13)
 MOV ECX, LENS ; счетчик цикла - количество необработанных символов
 MOV ESI, OFFSET BUF ; начало строки хранится в переменной BUF
 XOR BX, BX ; обнулить регистр BX командой XOR, 
-; выполняющей побитно операцию «исключающее или»
 XOR AX, AX; обнулить регистр AX
 
 MOV BL, [ESI]
@@ -107,6 +104,7 @@ CONVERT_1: 	; метка начала тела цикла
 	INC ESI ; перейти на следующий символ строки
 LOOP CONVERT_1 ; перейти на следующую итерацию цикла
 
+; проверка на отрицательное
 CMP flagA, 0
 JE notNegativeA
 neg EAX
@@ -170,6 +168,7 @@ CONVERT_2: 	; метка начала тела цикла
 	INC ESI ; перейти на следующий символ строки
 LOOP CONVERT_2 ; перейти на следующую итерацию цикла
 
+; проверка на отрицательное
 CMP flagB, 0
 JE notNegativeB
 neg EAX
@@ -180,36 +179,23 @@ MOV NUMEROS_B, EAX ; отправим полученное число в память
 MOV EAX, NUMEROS_A ; отправим первое число в регистр
 MOV EBX, NUMEROS_B ; отправим второе число в регистр
 
-MOV EDI, flagA
-ADD	EDI, flagB
-
-
-CMP EDI, 2
-JNE sum
-MOV flagAB, EDI
-neg EAX
-neg EBX
 
 ; сложение чисел
-sum:
 ADD EAX, EBX	   ; сложим, результат в EAX
 
 
-; отправлять обратно в память не будем, результат в EAX понадобится
+JNS TRANSFORM
 
-; вывод результата
+MOV flagNegSum, 1
+neg EAX
 
+TRANSFORM:
 CDQ ; приведём тип к 64-х битному (EAX распространяется на EDX)
-
 XOR EDI, EDI ; обнуление
 MOV TEN, 10 ; загрузка константы
 MOV ESI,OFFSET BUF ; начало строки хранится в переменной BUF
 
-CMP flagAB, 2
-JNE PRINT
-PUSH '-'
-
-PRINT:
+;преобразование в десятичную систему
 .WHILE EAX>=TEN ; пока число > 10
 		IDIV TEN ; результат в EAX, остаток в EDX
 		;поместить в строку
@@ -223,6 +209,13 @@ PUSH EAX ; в стек
 ADD EDI, 1 ; прибавить единицу
 
 MOV ECX, EDI ; число повторений
+CMP flagNegSum, 1
+JNE PRINT	
+MOV EBX, '-'
+PUSH EBX
+INC ECX
+
+PRINT:
 CONVERT_3: ; начало цикла
 	POP [ESI] ; из стека
 	INC ESI ; уменьшить ESI на 1
