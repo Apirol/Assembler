@@ -1,1 +1,1 @@
-Simple input-output programm on C++ assembly
+Simple input-output programm on C++ assembly(training)
